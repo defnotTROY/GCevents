@@ -5,7 +5,7 @@
 
 // App metadata
 export const appConfig = {
-  name: 'EventEase',
+  name: 'GCevents',
   version: process.env.REACT_APP_VERSION || '1.0.0',
   description: 'A Smart Event Management and Engagement Platform Using AI and Cloud Integration',
   features: {
@@ -30,10 +30,10 @@ export const getFooterText = () => {
   const features = [];
   if (appConfig.features.aiEnabled) features.push('AI');
   if (appConfig.features.cloudEnabled) features.push('Cloud');
-  
-  return features.length > 0 
+
+  return features.length > 0
     ? `Powered by ${features.join(' & ')}`
-    : 'Powered by EventEase';
+    : 'Powered by GCevents';
 };
 
 // Get QR code version

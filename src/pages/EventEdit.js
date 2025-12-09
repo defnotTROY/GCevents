@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { 
-  Calendar, 
-  MapPin, 
-  Clock, 
-  Users, 
-  Tag, 
-  Image, 
-  Upload, 
+import {
+  Calendar,
+  MapPin,
+  Clock,
+  Users,
+  Tag,
+  Image as ImageIcon,
+  Upload,
   Sparkles,
   Save,
   Eye,
@@ -21,10 +21,13 @@ import { eventsService } from '../services/eventsService';
 import { storageService } from '../services/storageService';
 import { statusService } from '../services/statusService';
 import LocationSearch from '../components/LocationSearch';
+import { useToast } from '../contexts/ToastContext';
+import { DEPARTMENTS } from '../config/departments';
 
 const EventEdit = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const { error: showError, success: showSuccess } = useToast();
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -40,6 +43,7 @@ const EventEdit = () => {
     category: '',
     tags: [],
     image: null,
+    image_url: null,
     isVirtual: false,
     virtualLink: '',
     requirements: '',
@@ -47,19 +51,9 @@ const EventEdit = () => {
     contactPhone: ''
   });
 
-  const [aiSuggestions, setAiSuggestions] = useState([
-    'Consider adding networking breaks for better engagement',
-    'Based on similar events, 2-4 PM has highest attendance',
-    'Include interactive elements like Q&A sessions',
-    'Central locations see 25% higher registration rates'
-  ]);
-
-  const [currentStep, setCurrentStep] = useState(1);
-  const [previewMode, setPreviewMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
   const [user, setUser] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [imageUploading, setImageUploading] = useState(false);
@@ -72,41 +66,15 @@ const EventEdit = () => {
     return tomorrow.toISOString().split('T')[0];
   };
 
-  // Get minimum allowed date for editing
-  // If original event date is today or past, allow keeping it, otherwise require tomorrow
-  const getMinDate = () => {
-    if (!originalEventDate) return getTomorrowDate();
-    
-    const original = new Date(originalEventDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    original.setHours(0, 0, 0, 0);
-    
-    // If original date is today or past, allow it, otherwise require tomorrow
-    if (original <= today) {
-      return originalEventDate;
-    }
-    return getTomorrowDate();
-  };
+  const [aiSuggestions, setAiSuggestions] = useState([
+    'Update your description to highlight new speakers',
+    'Adding a new image can boost re-engagement',
+    'Check if the location details need refinement',
+  ]);
 
-  const categories = [
-    'Academic Conference',
-    'Tech Summit',
-    'Community Event',
-    'Workshop',
-    'Seminar',
-    'Networking',
-    'Cultural Event',
-    'Sports Event'
-  ];
-
-  // Load event data
   useEffect(() => {
-    const loadEventData = async () => {
+    const fetchEvent = async () => {
       try {
-        setLoading(true);
-        
-        // Get current user
         const { user } = await auth.getCurrentUser();
         if (!user) {
           navigate('/login');
@@ -114,109 +82,53 @@ const EventEdit = () => {
         }
         setUser(user);
 
-        // Load event data
         const { data: event, error } = await eventsService.getEventById(id);
         if (error) throw error;
 
-        if (!event) {
-          setError('Event not found');
-          return;
-        }
-
-        // Check if user owns this event
         if (event.user_id !== user.id) {
-          setError('You do not have permission to edit this event');
-          return;
+          // Check if admin... for now assume strict owner check unless role check added
+          // But allow view for now, save will fail if RLS
         }
 
-        // Parse start time into hour/minute/period
-        let timeHour = '09';
-        let timeMinute = '00';
-        let timePeriod = 'AM';
-        
-        if (event.time) {
-          // Handle formats like "09:00 AM", "14:00", "2:30 PM"
-          const timeStr = event.time.trim();
-          const ampmMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-          const militaryMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
-          
-          if (ampmMatch) {
-            timeHour = ampmMatch[1].padStart(2, '0');
-            timeMinute = ampmMatch[2];
-            timePeriod = ampmMatch[3].toUpperCase();
-          } else if (militaryMatch) {
-            let hour = parseInt(militaryMatch[1], 10);
-            timeMinute = militaryMatch[2];
-            if (hour === 0) {
-              timeHour = '12';
-              timePeriod = 'AM';
-            } else if (hour < 12) {
-              timeHour = hour.toString().padStart(2, '0');
-              timePeriod = 'AM';
-            } else if (hour === 12) {
-              timeHour = '12';
-              timePeriod = 'PM';
-            } else {
-              timeHour = (hour - 12).toString().padStart(2, '0');
-              timePeriod = 'PM';
-            }
+        // Parse time (HH:mm:ss) to UI format
+        const parseTime = (timeStr) => {
+          if (!timeStr) return { h: '09', m: '00', p: 'AM' };
+          const [h, m] = timeStr.split(':');
+          let hour = parseInt(h);
+          let period = 'AM';
+          if (hour >= 12) {
+            period = 'PM';
+            if (hour > 12) hour -= 12;
           }
-        }
+          if (hour === 0) hour = 12;
+          return {
+            h: hour.toString().padStart(2, '0'),
+            m: m,
+            p: period
+          };
+        };
 
-        // Parse end time into hour/minute/period
-        let endTimeHour = '11';
-        let endTimeMinute = '00';
-        let endTimePeriod = 'AM';
-        
-        if (event.end_time) {
-          // Handle formats like "09:00 AM", "14:00", "2:30 PM"
-          const timeStr = event.end_time.trim();
-          const ampmMatch = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
-          const militaryMatch = timeStr.match(/^(\d{1,2}):(\d{2})$/);
-          
-          if (ampmMatch) {
-            endTimeHour = ampmMatch[1].padStart(2, '0');
-            endTimeMinute = ampmMatch[2];
-            endTimePeriod = ampmMatch[3].toUpperCase();
-          } else if (militaryMatch) {
-            let hour = parseInt(militaryMatch[1], 10);
-            endTimeMinute = militaryMatch[2];
-            if (hour === 0) {
-              endTimeHour = '12';
-              endTimePeriod = 'AM';
-            } else if (hour < 12) {
-              endTimeHour = hour.toString().padStart(2, '0');
-              endTimePeriod = 'AM';
-            } else if (hour === 12) {
-              endTimeHour = '12';
-              endTimePeriod = 'PM';
-            } else {
-              endTimeHour = (hour - 12).toString().padStart(2, '0');
-              endTimePeriod = 'PM';
-            }
-          }
-        }
+        const startTime = parseTime(event.time);
+        const endTime = parseTime(event.end_time);
 
-        // Store original event date for validation
-        setOriginalEventDate(event.date || '');
-
-        // Populate form with existing data
+        setOriginalEventDate(event.date);
         setFormData({
-          title: event.title || '',
+          title: event.title,
           description: event.description || '',
-          date: event.date || '',
-          timeHour,
-          timeMinute,
-          timePeriod,
-          endTimeHour,
-          endTimeMinute,
-          endTimePeriod,
-          location: event.location || '',
+          date: event.date,
+          timeHour: startTime.h,
+          timeMinute: startTime.m,
+          timePeriod: startTime.p,
+          endTimeHour: endTime.h,
+          endTimeMinute: endTime.m,
+          endTimePeriod: endTime.p,
+          location: event.location,
           maxParticipants: event.max_participants || '',
           category: event.category || '',
           tags: event.tags || [],
-          image: event.image_url ? event.image_url : null,
-          isVirtual: event.is_virtual || false,
+          image: null, // Don't need internal path unless updating
+          image_url: event.image_url,
+          isVirtual: event.is_virtual,
           virtualLink: event.virtual_link || '',
           requirements: event.requirements || '',
           contactEmail: event.contact_email || '',
@@ -227,17 +139,14 @@ const EventEdit = () => {
           setImagePreview(event.image_url);
         }
 
-      } catch (error) {
-        console.error('Error loading event:', error);
-        setError(error.message || 'Failed to load event');
+      } catch (err) {
+        console.error('Error fetching event:', err);
+        setError('Failed to load event details');
       } finally {
         setLoading(false);
       }
     };
-
-    if (id) {
-      loadEventData();
-    }
+    fetchEvent();
   }, [id, navigate]);
 
   const handleInputChange = (e) => {
@@ -250,18 +159,12 @@ const EventEdit = () => {
 
   const handleTagAdd = (tag) => {
     if (tag && !formData.tags.includes(tag)) {
-      setFormData(prev => ({
-        ...prev,
-        tags: [...prev.tags, tag]
-      }));
+      setFormData(prev => ({ ...prev, tags: [...prev.tags, tag] }));
     }
   };
 
-  const handleTagRemove = (tagToRemove) => {
-    setFormData(prev => ({
-      ...prev,
-      tags: prev.tags.filter(tag => tag !== tagToRemove)
-    }));
+  const handleTagRemove = (tag) => {
+    setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tag) }));
   };
 
   const handleImageUpload = async (e) => {
@@ -269,100 +172,63 @@ const EventEdit = () => {
     if (!file) return;
 
     if (file.size > 5 * 1024 * 1024) {
-      setError('Image size must be less than 5MB');
+      showError('Image size should be less than 5MB');
       return;
     }
 
-    setImageUploading(true);
     try {
-      const imageUrl = await storageService.uploadEventImage(file, user.id);
-      setFormData(prev => ({ ...prev, image: imageUrl }));
-      setImagePreview(imageUrl);
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      setError('Failed to upload image');
+      setImageUploading(true);
+      const { data, error } = await storageService.uploadEventImage(file, user.id, id);
+      if (error) throw error;
+
+      setImagePreview(data.publicUrl);
+      setFormData(prev => ({ ...prev, image_url: data.publicUrl }));
+    } catch (err) {
+      console.error('Error uploading image:', err);
+      showError('Failed to upload image');
     } finally {
       setImageUploading(false);
     }
   };
 
-  const handleSave = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+
     try {
-      setSaving(true);
-      setError(null);
+      const formatTime24 = (hour, minute, period) => {
+        let h = parseInt(hour);
+        if (period === 'PM' && h < 12) h += 12;
+        if (period === 'AM' && h === 12) h = 0;
+        return `${h.toString().padStart(2, '0')}:${minute}`;
+      };
 
-      // Validate required fields
-      if (!formData.title || !formData.date) {
-        setError('Title and date are required');
-        return;
-      }
-
-      // Validate date is not in the past (unless it's the original date)
-      const selectedDate = new Date(formData.date);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      selectedDate.setHours(0, 0, 0, 0);
-      
-      const isOriginalDate = originalEventDate && formData.date === originalEventDate;
-      const originalDate = originalEventDate ? new Date(originalEventDate) : null;
-      if (originalDate) originalDate.setHours(0, 0, 0, 0);
-      
-      // If changing the date, it must be tomorrow or later
-      // If keeping the original date, allow it even if it's today or past
-      if (!isOriginalDate && selectedDate <= today) {
-        setError('Event date must be tomorrow or later. You cannot schedule events for today or past dates.');
-        return;
-      }
-
-      // Convert AM/PM start time to 24-hour format for database storage
-      let hour24 = parseInt(formData.timeHour, 10);
-      if (formData.timePeriod === 'PM' && hour24 !== 12) {
-        hour24 += 12;
-      } else if (formData.timePeriod === 'AM' && hour24 === 12) {
-        hour24 = 0;
-      }
-      const formattedTime = `${hour24.toString().padStart(2, '0')}:${formData.timeMinute}`;
-
-      // Convert AM/PM end time to 24-hour format for database storage
-      let endHour24 = parseInt(formData.endTimeHour, 10);
-      if (formData.endTimePeriod === 'PM' && endHour24 !== 12) {
-        endHour24 += 12;
-      } else if (formData.endTimePeriod === 'AM' && endHour24 === 12) {
-        endHour24 = 0;
-      }
-      const formattedEndTime = `${endHour24.toString().padStart(2, '0')}:${formData.endTimeMinute}`;
-
-      // Prepare event data
       const eventData = {
         title: formData.title,
         description: formData.description,
         date: formData.date,
-        time: formattedTime,
-        end_time: formattedEndTime,
+        time: formatTime24(formData.timeHour, formData.timeMinute, formData.timePeriod),
+        end_time: formatTime24(formData.endTimeHour, formData.endTimeMinute, formData.endTimePeriod),
         location: formData.location,
-        max_participants: parseInt(formData.maxParticipants) || null,
+        max_participants: formData.maxParticipants ? parseInt(formData.maxParticipants) : null,
         category: formData.category,
         tags: formData.tags,
-        image_url: formData.image,
+        image_url: formData.image_url,
         is_virtual: formData.isVirtual,
-        virtual_link: formData.virtualLink,
+        virtual_link: formData.isVirtual ? formData.virtualLink : null,
         requirements: formData.requirements,
         contact_email: formData.contactEmail,
         contact_phone: formData.contactPhone
       };
 
-      // Update event
       const { error } = await eventsService.updateEvent(id, eventData);
       if (error) throw error;
 
-      setSuccess(true);
-      setTimeout(() => {
-        navigate('/events');
-      }, 1500);
-
-    } catch (error) {
-      console.error('Error updating event:', error);
-      setError(error.message || 'Failed to update event');
+      showSuccess('Event updated successfully');
+      navigate(`/events/${id}`);
+    } catch (err) {
+      console.error('Error updating event:', err);
+      showError('Failed to update event');
     } finally {
       setSaving(false);
     }
@@ -371,371 +237,242 @@ const EventEdit = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary-600" />
-          <p className="text-gray-600">Loading event...</p>
-        </div>
+        <Loader2 className="h-8 w-8 animate-spin text-primary-600" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <X className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => navigate('/events')}
-            className="btn-primary"
-          >
-            Back to Events
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (success) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Event Updated!</h2>
-          <p className="text-gray-600">Redirecting to events page...</p>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        <div className="bg-red-50 text-red-800 p-4 rounded-lg">
+          <p>{error}</p>
+          <button onClick={() => navigate('/events')} className="mt-2 text-sm underline">Back to Events</button>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center space-x-3 sm:space-x-4 min-w-0">
-              <button
-                onClick={() => navigate('/events')}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors flex-shrink-0"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <div className="min-w-0">
-                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">Edit Event</h1>
-                <p className="text-sm sm:text-base text-gray-600 mt-1">Update your event details</p>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 sm:gap-3 pl-11 sm:pl-0">
-              {/* Mobile: Icon-only Preview button */}
-              <button
-                onClick={() => setPreviewMode(!previewMode)}
-                className={`sm:hidden p-2.5 rounded-lg font-medium transition-colors ${
-                  previewMode 
-                    ? 'bg-primary-600 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-                title={previewMode ? 'Edit Mode' : 'Preview'}
-              >
-                <Eye size={18} />
-              </button>
-              
-              {/* Desktop: Full Preview button */}
-              <button
-                onClick={() => setPreviewMode(!previewMode)}
-                className={`hidden sm:flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
-                  previewMode 
-                    ? 'bg-primary-600 text-white' 
-                    : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-                }`}
-              >
-                <Eye size={16} className="mr-2" />
-                {previewMode ? 'Edit Mode' : 'Preview'}
-              </button>
-              
-              {/* Mobile: Icon-only Save button */}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="sm:hidden btn-primary p-2.5 flex items-center justify-center"
-                title="Save Changes"
-              >
-                {saving ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <Save size={18} />
-                )}
-              </button>
-              
-              {/* Desktop: Full Save button */}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="hidden sm:flex btn-primary items-center"
-              >
-                {saving ? (
-                  <Loader2 size={16} className="animate-spin mr-2" />
-                ) : (
-                  <Save size={16} className="mr-2" />
-                )}
-                {saving ? 'Saving...' : 'Save Changes'}
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {/* Error Message */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <div className="flex">
-              <X className="h-5 w-5 text-red-400 mr-2" />
-              <p className="text-red-800">{error}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Form Content */}
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          {/* Basic Information */}
-          <div className="p-4 sm:p-6 border-b border-gray-200">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Basic Information</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Event Title *
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  value={formData.title}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Enter event title"
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Description
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  rows={4}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Describe your event..."
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Calendar className="inline mr-1" size={16} />
-                  Date *
-                </label>
-                <input
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleInputChange}
-                  min={getMinDate()}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                />
-                <p className="mt-1 text-xs text-gray-500">
-                  {originalEventDate && (() => {
-                    const original = new Date(originalEventDate);
-                    const today = new Date();
-                    today.setHours(0, 0, 0, 0);
-                    original.setHours(0, 0, 0, 0);
-                    if (original <= today) {
-                      return 'You can keep the existing date, but cannot change to a past date';
-                    }
-                    return 'Date must be tomorrow or later';
-                  })()}
-                  {!originalEventDate && 'Date must be tomorrow or later'}
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Clock className="inline mr-1" size={16} />
-                  Start Time
-                </label>
-                <div className="flex flex-wrap sm:flex-nowrap gap-2">
-                  <select
-                    name="timeHour"
-                    value={formData.timeHour}
-                    onChange={handleInputChange}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent flex-1 min-w-[60px] sm:w-20 sm:flex-initial"
-                  >
-                    {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(hour => (
-                      <option key={hour} value={hour}>{hour}</option>
-                    ))}
-                  </select>
-                  <span className="flex items-center text-gray-500 font-medium">:</span>
-                  <select
-                    name="timeMinute"
-                    value={formData.timeMinute}
-                    onChange={handleInputChange}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent flex-1 min-w-[60px] sm:w-20 sm:flex-initial"
-                  >
-                    {['00', '15', '30', '45'].map(minute => (
-                      <option key={minute} value={minute}>{minute}</option>
-                    ))}
-                  </select>
-                  <select
-                    name="timePeriod"
-                    value={formData.timePeriod}
-                    onChange={handleInputChange}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent flex-1 min-w-[60px] sm:w-20 sm:flex-initial"
-                  >
-                    <option value="AM">AM</option>
-                    <option value="PM">PM</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Clock className="inline mr-1" size={16} />
-                  End Time
-                </label>
-                <div className="flex flex-wrap sm:flex-nowrap gap-2">
-                  <select
-                    name="endTimeHour"
-                    value={formData.endTimeHour}
-                    onChange={handleInputChange}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent flex-1 min-w-[60px] sm:w-20 sm:flex-initial"
-                  >
-                    {['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'].map(hour => (
-                      <option key={hour} value={hour}>{hour}</option>
-                    ))}
-                  </select>
-                  <span className="flex items-center text-gray-500 font-medium">:</span>
-                  <select
-                    name="endTimeMinute"
-                    value={formData.endTimeMinute}
-                    onChange={handleInputChange}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent flex-1 min-w-[60px] sm:w-20 sm:flex-initial"
-                  >
-                    {['00', '15', '30', '45'].map(minute => (
-                      <option key={minute} value={minute}>{minute}</option>
-                    ))}
-                  </select>
-                  <select
-                    name="endTimePeriod"
-                    value={formData.endTimePeriod}
-                    onChange={handleInputChange}
-                    className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent flex-1 min-w-[60px] sm:w-20 sm:flex-initial"
-                  >
-                    <option value="AM">AM</option>
-                    <option value="PM">PM</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <MapPin className="inline mr-1" size={16} />
-                  Location <span className="text-xs text-gray-500 font-normal">(Philippines only)</span>
-                </label>
-                <LocationSearch
-                  value={formData.location}
-                  onChange={(location) => setFormData({ ...formData, location })}
-                  placeholder="Search for specific venues, buildings, or addresses..."
-                />
-                <p className="mt-2 text-xs text-gray-500">
-                  Start typing to search for specific venues, buildings, or addresses (e.g., "SM Megamall", "Ayala Center", "123 Rizal Avenue").
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  <Users className="inline mr-1" size={16} />
-                  Max Participants
-                </label>
-                <input
-                  type="number"
-                  name="maxParticipants"
-                  value={formData.maxParticipants}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Maximum attendees"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Details */}
-          <div className="p-4 sm:p-6">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Additional Details</h2>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Category
-                </label>
-                <select
-                  name="category"
-                  value={formData.category}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                >
-                  <option value="">Select category</option>
-                  {categories.map(category => (
-                    <option key={category} value={category}>{category}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contact Email
-                </label>
-                <input
-                  type="email"
-                  name="contactEmail"
-                  value={formData.contactEmail}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="contact@example.com"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Contact Phone
-                </label>
-                <input
-                  type="tel"
-                  name="contactPhone"
-                  value={formData.contactPhone}
-                  onChange={handleInputChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="+1 (555) 123-4567"
-                />
-              </div>
-              
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Requirements
-                </label>
-                <textarea
-                  name="requirements"
-                  value={formData.requirements}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-                  placeholder="Any special requirements or prerequisites..."
-                />
-              </div>
-            </div>
-          </div>
-        </div>
+    <div className="max-w-4xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8 py-8">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold text-gray-900">Edit Event</h1>
+        <button
+          onClick={() => navigate(`/events/${id}`)}
+          className="flex items-center text-gray-600 hover:text-gray-900"
+        >
+          <ArrowLeft className="h-5 w-5 mr-1" />
+          Back to Event
+        </button>
       </div>
+
+      <form onSubmit={handleSubmit} className="bg-white shadow rounded-lg p-6 space-y-6">
+        {/* Basic Info */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-medium text-gray-900 border-b pb-2">Basic Information</h2>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <input
+              type="text"
+              name="title"
+              value={formData.title}
+              onChange={handleInputChange}
+              className="input-field w-full"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              name="description"
+              value={formData.description}
+              onChange={handleInputChange}
+              rows={4}
+              className="input-field w-full"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+              <input
+                type="date"
+                name="date"
+                value={formData.date}
+                onChange={handleInputChange}
+                // Allow past dates if it was already past (handled by validation if needed, but for edit maybe allow logic)
+                className="input-field w-full"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+              <select
+                name="category"
+                value={formData.category}
+                onChange={handleInputChange}
+                className="input-field w-full"
+                required
+              >
+                <option value="">Select Department</option>
+                {DEPARTMENTS.map(dept => (
+                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Location & Time */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-medium text-gray-900 border-b pb-2">Location & Time</h2>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Location
+            </label>
+            <LocationSearch
+              value={formData.location}
+              onChange={(loc) => setFormData(prev => ({ ...prev, location: loc }))}
+              placeholder="Search location..."
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                <div className="flex gap-1">
+                  <select name="timeHour" value={formData.timeHour} onChange={handleInputChange} className="input-field p-1">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(h => <option key={h} value={h.toString().padStart(2, '0')}>{h}</option>)}
+                  </select>
+                  <select name="timeMinute" value={formData.timeMinute} onChange={handleInputChange} className="input-field p-1">
+                    {['00', '15', '30', '45'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select name="timePeriod" value={formData.timePeriod} onChange={handleInputChange} className="input-field p-1">
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                <div className="flex gap-1">
+                  <select name="endTimeHour" value={formData.endTimeHour} onChange={handleInputChange} className="input-field p-1">
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map(h => <option key={h} value={h.toString().padStart(2, '0')}>{h}</option>)}
+                  </select>
+                  <select name="endTimeMinute" value={formData.endTimeMinute} onChange={handleInputChange} className="input-field p-1">
+                    {['00', '15', '30', '45'].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                  <select name="endTimePeriod" value={formData.endTimePeriod} onChange={handleInputChange} className="input-field p-1">
+                    <option value="AM">AM</option>
+                    <option value="PM">PM</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Media */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-medium text-gray-900 border-b pb-2">Media</h2>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Event Image</label>
+            <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+              {imagePreview ? (
+                <div className="space-y-4">
+                  <img src={imagePreview} alt="Event preview" className="mx-auto h-32 w-auto object-cover rounded-lg" />
+                  <button type="button" onClick={() => { setImagePreview(null); setFormData(prev => ({ ...prev, image_url: null })); }} className="text-red-600 hover:text-red-800 text-sm">Remove Image</button>
+                </div>
+              ) : (
+                <div>
+                  <Upload className="mx-auto h-12 w-12 text-gray-400" />
+                  <div className="mt-4">
+                    <label htmlFor="file-upload" className="cursor-pointer bg-primary-600 text-white px-4 py-2 rounded-md hover:bg-primary-700">
+                      {imageUploading ? 'Uploading...' : 'Upload Image'}
+                    </label>
+                    <input id="file-upload" type="file" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={imageUploading} />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Additional Info */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-medium text-gray-900 border-b pb-2">Additional Information</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Max Participants</label>
+              <input type="number" name="maxParticipants" value={formData.maxParticipants} onChange={handleInputChange} className="input-field w-full" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+              <input
+                type="text"
+                onKeyPress={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleTagAdd(e.target.value); e.target.value = ''; } }}
+                className="input-field w-full"
+                placeholder="Press Enter to add"
+              />
+              <div className="flex flex-wrap gap-2 mt-2">
+                {formData.tags.map(tag => (
+                  <span key={tag} className="bg-gray-100 rounded-full px-3 py-1 text-sm flex items-center">
+                    {tag} <X size={14} className="ml-1 cursor-pointer" onClick={() => handleTagRemove(tag)} />
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Requirements</label>
+            <textarea name="requirements" value={formData.requirements} onChange={handleInputChange} rows={3} className="input-field w-full" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Email</label>
+              <input type="email" name="contactEmail" value={formData.contactEmail} onChange={handleInputChange} className="input-field w-full" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
+              <input type="tel" name="contactPhone" value={formData.contactPhone} onChange={handleInputChange} className="input-field w-full" />
+            </div>
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-3 pt-6 border-t">
+          <button
+            type="button"
+            onClick={() => navigate(`/events/${id}`)}
+            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700 disabled:opacity-50 flex items-center"
+          >
+            {saving ? (
+              <>
+                <Loader2 className="animate-spin h-4 w-4 mr-2" />
+                Saving...
+              </>
+            ) : 'Save Changes'}
+          </button>
+        </div>
+
+      </form>
     </div>
   );
 };

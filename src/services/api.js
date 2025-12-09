@@ -1,4 +1,4 @@
-// API service for EventEase frontend
+// API service for GCevents frontend
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
 
 class ApiService {

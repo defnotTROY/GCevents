@@ -28,8 +28,11 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 1440  # 24 hours
     
     # AI Services
+    # AI Services
     OPENAI_API_KEY: Optional[str] = None
     OPENAI_MODEL: str = "gpt-3.5-turbo"
+    GEMINI_API_KEY: Optional[str] = None
+    GEMINI_MODEL: str = "gemini-pro"
     
     # File Upload - Cloudinary
     CLOUDINARY_CLOUD_NAME: Optional[str] = None

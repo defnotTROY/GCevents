@@ -1,1 +1,1 @@
-# EventEase Backend Application
+# GCevents Backend Application

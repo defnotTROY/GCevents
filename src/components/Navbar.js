@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { searchService } from '../services/searchService';
 import { notificationService } from '../services/notificationService';
 import SearchResults from './SearchResults';
+import { appConfig } from '../config/appConfig';
 
 const Navbar = ({ onMenuClick }) => {
   const navigate = useNavigate();
@@ -28,7 +29,7 @@ const Navbar = ({ onMenuClick }) => {
       try {
         const { user } = await auth.getCurrentUser();
         setUser(user);
-        
+
         // Load notifications if user is logged in
         if (user) {
           await loadNotifications(user.id);
@@ -46,7 +47,7 @@ const Navbar = ({ onMenuClick }) => {
     const { data: { subscription } } = auth.onAuthStateChange((event, session) => {
       setUser(session?.user || null);
       setIsLoading(false);
-      
+
       // Load notifications when user logs in
       if (session?.user) {
         loadNotifications(session.user.id);
@@ -198,7 +199,7 @@ const Navbar = ({ onMenuClick }) => {
   const handleSearchInputChange = (e) => {
     const value = e.target.value;
     setSearchQuery(value);
-    
+
     // Auto-search as user types (with debounce)
     if (value.trim().length >= 2) {
       clearTimeout(searchTimeout);
@@ -228,22 +229,22 @@ const Navbar = ({ onMenuClick }) => {
 
   const getUserDisplayName = () => {
     if (!user) return 'Guest User';
-    
+
     // Try to get name from user metadata
     const firstName = user.user_metadata?.first_name;
     const lastName = user.user_metadata?.last_name;
-    
+
     if (firstName && lastName) {
       return `${firstName} ${lastName}`;
     }
-    
+
     // Fallback to email
     return user.email?.split('@')[0] || 'User';
   };
 
   const getUserRole = () => {
     if (!user) return 'Guest';
-    
+
     // Get role from user metadata, fallback to default
     return user.user_metadata?.role || 'Event Organizer';
   };
@@ -252,8 +253,8 @@ const Navbar = ({ onMenuClick }) => {
     // Mark notification as read
     if (!notification.read) {
       await notificationService.markAsRead(notification.id);
-      setNotifications(prev => 
-        prev.map(n => 
+      setNotifications(prev =>
+        prev.map(n =>
           n.id === notification.id ? { ...n, read: true, read_at: new Date().toISOString() } : n
         )
       );
@@ -279,7 +280,7 @@ const Navbar = ({ onMenuClick }) => {
 
   const markAllAsRead = async () => {
     if (!user) return;
-    
+
     try {
       await notificationService.markAllAsRead(user.id);
       setNotifications(prev => prev.map(n => ({ ...n, read: true, read_at: new Date().toISOString() })));
@@ -296,7 +297,7 @@ const Navbar = ({ onMenuClick }) => {
     if (metadata?.alert_type === 'verification_rejected') {
       return '❌';
     }
-    
+
     switch (type) {
       case 'system_alert':
         return '🔔';
@@ -321,7 +322,7 @@ const Navbar = ({ onMenuClick }) => {
 
   const formatNotificationTime = (createdAt) => {
     if (!createdAt) return '';
-    
+
     const now = new Date();
     const time = new Date(createdAt);
     const diffMs = now - time;
@@ -333,7 +334,7 @@ const Navbar = ({ onMenuClick }) => {
     if (diffMins < 60) return `${diffMins} min ago`;
     if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
     if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    
+
     return time.toLocaleDateString();
   };
 
@@ -349,10 +350,10 @@ const Navbar = ({ onMenuClick }) => {
             >
               <Menu size={20} />
             </button>
-            
+
             <div className="flex items-center ml-2 sm:ml-4 lg:ml-0">
               <div className="flex-shrink-0">
-                <h1 className="text-lg sm:text-xl font-bold text-primary-600">EventEase</h1>
+                <h1 className="text-lg sm:text-xl font-bold text-primary-600">{appConfig.name}</h1>
               </div>
             </div>
           </div>
@@ -371,12 +372,12 @@ const Navbar = ({ onMenuClick }) => {
               {isSearching && (
                 <Loader2 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 animate-spin" size={16} />
               )}
-              
+
               {/* Search Results Dropdown */}
               {showSearchResults && searchResults && (
                 <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50">
-                  <SearchResults 
-                    results={searchResults} 
+                  <SearchResults
+                    results={searchResults}
                     searchQuery={searchQuery}
                     onClose={() => setShowSearchResults(false)}
                   />
@@ -445,18 +446,16 @@ const Navbar = ({ onMenuClick }) => {
                           <button
                             key={notification.id}
                             onClick={() => handleNotificationClick(notification)}
-                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-left hover:bg-gray-50 transition-colors ${
-                              !notification.read ? 'bg-blue-50' : 'bg-white'
-                            }`}
+                            className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 text-left hover:bg-gray-50 transition-colors ${!notification.read ? 'bg-blue-50' : 'bg-white'
+                              }`}
                           >
                             <div className="flex items-start space-x-2 sm:space-x-3">
                               <div className="flex-shrink-0 mt-0.5">
                                 <span className="text-base sm:text-lg">{getNotificationIcon(notification.type, notification.metadata)}</span>
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className={`text-xs sm:text-sm break-words ${
-                                  !notification.read ? 'font-semibold text-gray-900' : 'text-gray-700'
-                                }`}>
+                                <p className={`text-xs sm:text-sm break-words ${!notification.read ? 'font-semibold text-gray-900' : 'text-gray-700'
+                                  }`}>
                                   {notification.title || notification.message}
                                 </p>
                                 {notification.title && notification.message && notification.title !== notification.message && (
@@ -525,7 +524,7 @@ const Navbar = ({ onMenuClick }) => {
                     <p className="text-sm font-medium text-gray-900 truncate">{getUserDisplayName()}</p>
                     <p className="text-xs text-gray-500 truncate">{user?.email}</p>
                   </div>
-                  
+
                   <button
                     onClick={() => {
                       navigate('/settings');
@@ -536,7 +535,7 @@ const Navbar = ({ onMenuClick }) => {
                     <Settings className="mr-2 flex-shrink-0" size={16} />
                     Settings
                   </button>
-                  
+
                   <button
                     onClick={() => {
                       handleLogout();
@@ -558,7 +557,7 @@ const Navbar = ({ onMenuClick }) => {
       {showMobileSearch && (
         <div className="fixed inset-0 z-[60] md:hidden">
           {/* Backdrop */}
-          <div 
+          <div
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => {
               setShowMobileSearch(false);
@@ -566,7 +565,7 @@ const Navbar = ({ onMenuClick }) => {
               setSearchResults(null);
             }}
           />
-          
+
           {/* Search Container */}
           <div className="absolute top-0 left-0 right-0 bg-white shadow-lg p-3 sm:p-4 animate-slide-down safe-area-inset-top">
             <form onSubmit={(e) => {
@@ -600,12 +599,12 @@ const Navbar = ({ onMenuClick }) => {
                   <X size={20} />
                 </button>
               </div>
-              
+
               {/* Mobile Search Results */}
               {showSearchResults && searchResults && (
                 <div className="mt-2 bg-white border border-gray-200 rounded-lg shadow-lg max-h-[60vh] overflow-y-auto">
-                  <SearchResults 
-                    results={searchResults} 
+                  <SearchResults
+                    results={searchResults}
                     searchQuery={searchQuery}
                     onClose={() => {
                       setShowSearchResults(false);

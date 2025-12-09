@@ -35,7 +35,7 @@ limiter = Limiter(key_func=get_remote_address)
 async def lifespan(app: FastAPI):
     """Application lifespan events"""
     # Startup
-    logger.info("🚀 Starting EventEase API...")
+    logger.info("🚀 Starting GCevents API...")
     
     # Create database tables
     if engine is not None:  # Only create tables if using SQLAlchemy engine
@@ -46,11 +46,11 @@ async def lifespan(app: FastAPI):
     yield
     
     # Shutdown
-    logger.info("🛑 Shutting down EventEase API...")
+    logger.info("🛑 Shutting down GCevents API...")
 
 # Create FastAPI application
 app = FastAPI(
-    title="EventEase API",
+    title="GCevents API",
     description="Smart Event Management Platform with AI Integration",
     version="1.0.0",
     docs_url="/docs" if settings.DEBUG else None,
@@ -91,7 +91,7 @@ app.include_router(api_router, prefix="/api/v1")
 async def root():
     """Root endpoint"""
     return {
-        "message": "EventEase API",
+        "message": "GCevents API",
         "version": "1.0.0",
         "status": "running",
         "docs": "/docs" if settings.DEBUG else "disabled"
@@ -102,7 +102,7 @@ async def health_check():
     """Health check endpoint"""
     return {
         "status": "healthy",
-        "message": "EventEase API is running",
+        "message": "GCevents API is running",
         "version": "1.0.0",
         "environment": settings.ENVIRONMENT
     }
@@ -112,7 +112,7 @@ async def api_health_check():
     """API health check endpoint"""
     return {
         "success": True,
-        "message": "EventEase API is running",
+        "message": "GCevents API is running",
         "timestamp": "2024-01-01T00:00:00Z",
         "version": "1.0.0"
     }

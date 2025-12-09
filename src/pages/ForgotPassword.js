@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 import { auth } from '../lib/supabase';
+import { appConfig } from '../config/appConfig';
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -17,7 +18,7 @@ const ForgotPassword = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Clear previous errors
     setError('');
 
@@ -33,25 +34,25 @@ const ForgotPassword = () => {
     }
 
     setIsLoading(true);
-    
+
     try {
       // Use Supabase to send password reset email
       const { data, error } = await auth.resetPassword(email);
-      
+
       if (error) {
         console.error('Password reset error:', error);
         setError(error.message || 'Failed to send reset email. Please check your Supabase email configuration.');
         return;
       }
-      
+
       // Show success state
       setIsSuccess(true);
-      
+
       // Redirect to login page after 3 seconds
       setTimeout(() => {
         navigate('/login');
       }, 3000);
-      
+
     } catch (error) {
       console.error('Password reset exception:', error);
       setError(error.message || 'Failed to send reset email. Please check your Supabase email configuration.');
@@ -73,7 +74,7 @@ const ForgotPassword = () => {
       {/* Subtle background logo */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <div className="text-[#3B82F6] opacity-5 text-[20rem] font-black tracking-wider select-none">
-          EVENTEASE
+          GCEVENTS
         </div>
       </div>
 
@@ -135,9 +136,8 @@ const ForgotPassword = () => {
                         autoComplete="email"
                         value={email}
                         onChange={handleEmailChange}
-                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                          error ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${error ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         placeholder="Enter your email address"
                       />
                     </div>
@@ -166,8 +166,8 @@ const ForgotPassword = () => {
 
                   {/* Back to Login Link */}
                   <div className="text-center">
-                    <Link 
-                      to="/login" 
+                    <Link
+                      to="/login"
                       className="inline-flex items-center text-sm font-medium text-blue-600 hover:text-blue-500 transition-colors"
                     >
                       <ArrowLeft className="h-4 w-4 mr-1" />
@@ -193,7 +193,7 @@ const ForgotPassword = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <p className="text-sm text-gray-600">
-                © 2025 EventEase. All rights reserved. | Your ultimate event management solution.
+                © 2025 {appConfig.name}. All rights reserved. | Your ultimate event management solution.
               </p>
             </div>
           </div>

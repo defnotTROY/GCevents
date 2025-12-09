@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone, CheckCircle, XCircle } from 'lucide-react';
 import { auth } from '../lib/supabase';
+import { appConfig } from '../config/appConfig';
+import { DEPARTMENTS } from '../config/departments';
 
 const Signup = () => {
   const navigate = useNavigate();
@@ -31,7 +33,7 @@ const Signup = () => {
       ...prev,
       [name]: value
     }));
-    
+
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
@@ -41,10 +43,9 @@ const Signup = () => {
     }
   };
 
-  // Email validation - must have @gmail.com or similar valid domain
+  // Email validation - must be a valid Gordon College email
   const validateEmail = (email) => {
-    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    return emailRegex.test(email);
+    return email.toLowerCase().endsWith('@gordoncollege.edu.ph');
   };
 
   // Password validation - 1 upper, 1 lower, 1 special, 1 number, 8+ chars
@@ -71,13 +72,13 @@ const Signup = () => {
   const validatePhone = (phone) => {
     // Remove all spaces and dashes
     const cleanPhone = phone.replace(/[\s-]/g, '');
-    
+
     // Check for exactly 11 digits (no country code)
     const elevenDigits = /^\d{11}$/.test(cleanPhone);
-    
+
     // Check for country code format (+63XXXXXXXXXX)
     const countryCodeFormat = /^\+\d{1,3}\d{10}$/.test(cleanPhone);
-    
+
     return elevenDigits || countryCodeFormat;
   };
 
@@ -102,7 +103,7 @@ const Signup = () => {
     if (!formData.email) {
       newErrors.email = 'Email is required';
     } else if (!validateEmail(formData.email)) {
-      newErrors.email = 'Please enter a valid email address (e.g., user@gmail.com)';
+      newErrors.email = 'Please use your institutional email (@gordoncollege.edu.ph)';
     }
 
     // Phone validation
@@ -135,11 +136,11 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
-    
+
     try {
       // Use Supabase to sign up
       const { data, error } = await auth.signUp(
@@ -155,25 +156,25 @@ const Signup = () => {
           selected_tags: formData.selectedTags // Include selected tags
         }
       );
-      
+
       if (error) {
         setErrors({ general: error.message });
         return;
       }
-      
+
       // Show success state
       setIsSuccess(true);
-      
+
       // Store user preferences if provided (will be saved after email confirmation)
       // The preferences are already stored in user_metadata during signup
       // They'll be used immediately for recommendations when user logs in
-      
+
       // Always redirect to email verification page
       // Supabase will send verification email and user needs to verify before logging in
       setTimeout(() => {
         navigate(`/verify-email?email=${encodeURIComponent(formData.email)}`);
       }, 2000);
-      
+
     } catch (error) {
       setErrors({ general: 'Signup failed. Please try again.' });
     } finally {
@@ -188,7 +189,7 @@ const Signup = () => {
       {/* Subtle background logo */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
         <div className="text-[#3B82F6] opacity-5 text-[6rem] sm:text-[12rem] md:text-[16rem] lg:text-[20rem] font-black tracking-wider select-none whitespace-nowrap">
-          EVENTEASE
+          GCEVENTS
         </div>
       </div>
 
@@ -204,7 +205,7 @@ const Signup = () => {
                   Create Your Account
                 </h1>
                 <p className="text-sm text-gray-600">
-                  Join EventEase and start managing your events
+                  Join {appConfig.name} and start managing your events
                 </p>
               </div>
 
@@ -218,7 +219,7 @@ const Signup = () => {
                     Account Created Successfully!
                   </h3>
                   <p className="text-green-700 mb-4">
-                    Welcome to EventEase! Please complete your verification to get started. Redirecting you to verification...
+                    Welcome to {appConfig.name}! Please complete your verification to get started. Redirecting you to verification...
                   </p>
                   <div className="flex justify-center">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600"></div>
@@ -228,12 +229,12 @@ const Signup = () => {
 
               {!isSuccess ? (
                 <form className="space-y-6" onSubmit={handleSubmit}>
-              {/* General Error Message */}
-              {errors.general && (
-                <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                  <p className="text-sm text-red-600">{errors.general}</p>
-                </div>
-              )}
+                  {/* General Error Message */}
+                  {errors.general && (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                      <p className="text-sm text-red-600">{errors.general}</p>
+                    </div>
+                  )}
 
                   {/* Name Fields */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4">
@@ -252,9 +253,8 @@ const Signup = () => {
                           type="text"
                           value={formData.firstName}
                           onChange={handleChange}
-                          className={`block w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                            errors.firstName ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`block w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${errors.firstName ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="John"
                         />
                       </div>
@@ -299,9 +299,8 @@ const Signup = () => {
                           type="text"
                           value={formData.lastName}
                           onChange={handleChange}
-                          className={`block w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                            errors.lastName ? 'border-red-500' : 'border-gray-300'
-                          }`}
+                          className={`block w-full pl-9 sm:pl-10 pr-3 py-2.5 sm:py-3 text-sm sm:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${errors.lastName ? 'border-red-500' : 'border-gray-300'
+                            }`}
                           placeholder="Doe"
                         />
                       </div>
@@ -327,10 +326,9 @@ const Signup = () => {
                         autoComplete="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                          errors.email ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="john.doe@gmail.com"
+                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${errors.email ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        placeholder="juan.delacruz@gordoncollege.edu.ph"
                       />
                     </div>
                     {errors.email && (
@@ -353,9 +351,8 @@ const Signup = () => {
                         type="tel"
                         value={formData.phone}
                         onChange={handleChange}
-                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                          errors.phone ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${errors.phone ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         placeholder="09123456789 or +639123456789"
                       />
                     </div>
@@ -376,11 +373,10 @@ const Signup = () => {
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, accountType: 'organizer' })}
-                        className={`p-3 sm:p-4 border-2 rounded-lg transition-all text-left ${
-                          formData.accountType === 'organizer'
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                        className={`p-3 sm:p-4 border-2 rounded-lg transition-all text-left ${formData.accountType === 'organizer'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                          }`}
                       >
                         <div className="font-semibold text-gray-900 text-sm sm:text-base mb-0.5 sm:mb-1">Event Organizer</div>
                         <div className="text-xs text-gray-600">
@@ -390,11 +386,10 @@ const Signup = () => {
                       <button
                         type="button"
                         onClick={() => setFormData({ ...formData, accountType: 'user' })}
-                        className={`p-3 sm:p-4 border-2 rounded-lg transition-all text-left ${
-                          formData.accountType === 'user'
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
+                        className={`p-3 sm:p-4 border-2 rounded-lg transition-all text-left ${formData.accountType === 'user'
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                          }`}
                       >
                         <div className="font-semibold text-gray-900 text-sm sm:text-base mb-0.5 sm:mb-1">Regular User</div>
                         <div className="text-xs text-gray-600">
@@ -409,39 +404,40 @@ const Signup = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-2 sm:mb-3">
                       What events interest you? <span className="text-gray-500 text-xs block sm:inline">(Optional - helps us personalize recommendations)</span>
                     </label>
-                    
-                    {/* Category Selection */}
+
+                    {/* Department Interest Selection */}
                     <div className="mb-3 sm:mb-4">
                       <label className="block text-xs font-medium text-gray-600 mb-2">
-                        Preferred Categories (Select up to 3)
+                        Preferred Departments (Select up to 3)
                       </label>
                       <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                        {['Academic Conference', 'Tech Summit', 'Community Event', 'Workshop', 'Seminar', 'Networking', 'Cultural Event', 'Sports Event'].map((category) => (
+                        {DEPARTMENTS.map((dept) => (
                           <button
-                            key={category}
+                            key={dept.id}
                             type="button"
                             onClick={() => {
                               const current = formData.selectedCategories;
-                              if (current.includes(category)) {
-                                setFormData({ ...formData, selectedCategories: current.filter(c => c !== category) });
+                              const value = dept.id;
+                              if (current.includes(value)) {
+                                setFormData({ ...formData, selectedCategories: current.filter(c => c !== value) });
                               } else if (current.length < 3) {
-                                setFormData({ ...formData, selectedCategories: [...current, category] });
+                                setFormData({ ...formData, selectedCategories: [...current, value] });
                               }
                             }}
-                            className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm rounded-full border transition-all ${
-                              formData.selectedCategories.includes(category)
-                                ? 'bg-blue-100 border-blue-500 text-blue-700'
-                                : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
-                            } ${formData.selectedCategories.length >= 3 && !formData.selectedCategories.includes(category) ? 'opacity-50 cursor-not-allowed' : ''}`}
-                            disabled={formData.selectedCategories.length >= 3 && !formData.selectedCategories.includes(category)}
+                            className={`px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm rounded-full border transition-all ${formData.selectedCategories.includes(dept.id)
+                              ? 'bg-blue-100 border-blue-500 text-blue-700'
+                              : 'bg-white border-gray-300 text-gray-700 hover:border-gray-400'
+                              } ${formData.selectedCategories.length >= 3 && !formData.selectedCategories.includes(dept.id) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            disabled={formData.selectedCategories.length >= 3 && !formData.selectedCategories.includes(dept.id)}
+                            title={dept.name}
                           >
-                            {category}
+                            {dept.id}
                           </button>
                         ))}
                       </div>
                       {formData.selectedCategories.length > 0 && (
                         <p className="mt-2 text-xs text-gray-500">
-                          Selected: {formData.selectedCategories.join(', ')}
+                          Selected: {formData.selectedCategories.map(id => DEPARTMENTS.find(d => d.id === id)?.name || id).join(', ')}
                         </p>
                       )}
                     </div>
@@ -501,9 +497,8 @@ const Signup = () => {
                         autoComplete="new-password"
                         value={formData.password}
                         onChange={handleChange}
-                        className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                          errors.password ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${errors.password ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         placeholder="Create a strong password"
                       />
                       <button
@@ -598,9 +593,8 @@ const Signup = () => {
                         autoComplete="new-password"
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                          errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${errors.confirmPassword ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         placeholder="Confirm your password"
                       />
                       <button
@@ -631,7 +625,7 @@ const Signup = () => {
                     />
                     <label htmlFor="terms" className="ml-2 block text-sm text-gray-900">
                       I agree to the{' '}
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setShowTermsModal(true)}
                         className="text-blue-600 hover:text-blue-500 underline"
@@ -639,7 +633,7 @@ const Signup = () => {
                         Terms and Conditions
                       </button>{' '}
                       and{' '}
-                      <button 
+                      <button
                         type="button"
                         onClick={() => setShowPrivacyModal(true)}
                         className="text-blue-600 hover:text-blue-500 underline"
@@ -671,8 +665,8 @@ const Signup = () => {
                   <div className="text-center">
                     <p className="text-sm text-gray-600">
                       Already have an account?{' '}
-                      <Link 
-                        to="/login" 
+                      <Link
+                        to="/login"
                         className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
                       >
                         Sign in here
@@ -687,7 +681,7 @@ const Signup = () => {
 
         {/* Terms and Conditions Modal */}
         {showTermsModal && (
-          <div 
+          <div
             className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[100] flex items-start justify-center pt-20 pb-10 px-4"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
@@ -695,7 +689,7 @@ const Signup = () => {
               }
             }}
           >
-            <div 
+            <div
               className="relative p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white"
               onClick={(e) => e.stopPropagation()}
             >
@@ -711,15 +705,15 @@ const Signup = () => {
                 </div>
                 <div className="max-h-96 overflow-y-auto text-sm text-gray-600 space-y-4">
                   <p><strong>Last updated:</strong> January 2025</p>
-                  
+
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">1. Acceptance of Terms</h4>
-                    <p>By accessing and using EventEase, you accept and agree to be bound by the terms and provision of this agreement.</p>
+                    <p>By accessing and using {appConfig.name}, you accept and agree to be bound by the terms and provision of this agreement.</p>
                   </div>
 
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">2. Use License</h4>
-                    <p>Permission is granted to temporarily download one copy of EventEase for personal, non-commercial transitory viewing only.</p>
+                    <p>Permission is granted to temporarily download one copy of {appConfig.name} for personal, non-commercial transitory viewing only.</p>
                   </div>
 
                   <div>
@@ -757,7 +751,7 @@ const Signup = () => {
 
         {/* Privacy Policy Modal */}
         {showPrivacyModal && (
-          <div 
+          <div
             className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-[100] flex items-start justify-center pt-20 pb-10 px-4"
             onClick={(e) => {
               if (e.target === e.currentTarget) {
@@ -765,7 +759,7 @@ const Signup = () => {
               }
             }}
           >
-            <div 
+            <div
               className="relative p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white"
               onClick={(e) => e.stopPropagation()}
             >
@@ -781,7 +775,7 @@ const Signup = () => {
                 </div>
                 <div className="max-h-96 overflow-y-auto text-sm text-gray-600 space-y-4">
                   <p><strong>Last updated:</strong> January 2025</p>
-                  
+
                   <div>
                     <h4 className="font-semibold text-gray-900 mb-2">1. Information We Collect</h4>
                     <p>We collect information you provide directly to us, such as when you create an account, register for events, or contact us for support.</p>
@@ -830,7 +824,7 @@ const Signup = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <p className="text-sm text-gray-600">
-                © 2025 EventEase. All rights reserved. | Your ultimate event management solution.
+                © 2025 {appConfig.name}. All rights reserved. | Your ultimate event management solution.
               </p>
             </div>
           </div>

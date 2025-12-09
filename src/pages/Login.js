@@ -3,6 +3,7 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User, Phone, CheckCircle, Calendar, ShieldCheck } from 'lucide-react';
 import { auth } from '../lib/supabase';
 import { appConfig } from '../config/appConfig';
+import studentDatabaseService from '../services/studentDatabaseService';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -24,7 +25,7 @@ const Login = () => {
       ...prev,
       [name]: value
     }));
-    
+
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
@@ -37,11 +38,17 @@ const Login = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    // Email validation
+    // Email/ID validation
     if (!formData.email) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = 'Email or Student ID is required';
+    } else {
+      // Check if it's a valid email OR a valid 9-digit student ID
+      const isEmail = /\S+@\S+\.\S+/.test(formData.email);
+      const isStudentId = /^\d{9}$/.test(formData.email);
+
+      if (!isEmail && !isStudentId) {
+        newErrors.email = 'Please enter a valid email or 9-digit Student ID';
+      }
     }
 
     // Password validation
@@ -55,34 +62,100 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     setIsLoading(true);
-    
+
     try {
+      // Determine if input is email or student ID
+      let loginEmail = formData.email;
+      const isStudentId = /^\d{9}$/.test(formData.email);
+
+      if (isStudentId) {
+        loginEmail = `${formData.email}@gordoncollege.edu.ph`;
+        console.log('Logging in with auto-formatted student email:', loginEmail);
+      }
+
       // Use Supabase to sign in
-      const { data, error } = await auth.signIn(formData.email, formData.password);
-      
+      const { data, error } = await auth.signIn(loginEmail, formData.password);
+
       if (error) {
+        console.log('Login error:', error.message);
+        // Fallback: Check if user exists in the Student API but not in Supabase
+        try {
+          // Import service dynamically if needed or assume it's imported at top
+          // We need to import it at the top of file
+          const externalStudent = await studentDatabaseService.verifyCredentials(loginEmail, formData.password);
+
+          if (externalStudent) {
+            console.log('Found valid external student, creating account...', externalStudent);
+
+            // Auto-register the user
+            const { data: signUpData, error: signUpError } = await auth.signUp(
+              loginEmail,
+              formData.password,
+              {
+                first_name: externalStudent.firstName,
+                last_name: externalStudent.lastName,
+                department: externalStudent.department || 'General',
+                student_id: externalStudent._id, // Store API ID
+                role: 'user', // Default role
+                is_student: true
+              }
+            );
+
+            if (signUpError) {
+              console.error('Auto-signup failed:', signUpError);
+              throw signUpError;
+            }
+
+            // If markup success, we might have a session or need verification
+            if (signUpData.session) {
+              setIsSuccess(true);
+              navigate('/');
+              return;
+            } else if (signUpData.user) {
+              // User created but needs email verification?
+              // Or maybe it just worked but no session returned (depends on config)
+              // We'll treat as success and try to auto-login again just in case, or show verification message
+
+              // Retry login immediately in case session wasn't returned but user created
+              const { data: retryData, error: retryError } = await auth.signIn(loginEmail, formData.password);
+              if (!retryError && retryData.session) {
+                setIsSuccess(true);
+                navigate('/');
+                return;
+              }
+
+              setErrors({ general: 'Account created from Student Record. Please check your email for verification.' });
+              return;
+            }
+          }
+        } catch (fallbackError) {
+          console.error('Fallback login failed:', fallbackError);
+        }
+
         setErrors({ general: error.message });
         return;
       }
-      
+
       // Show success state
       setIsSuccess(true);
-      
+
       // Redirect to verification page if user needs verification, otherwise dashboard
       setTimeout(() => {
-        // Check if user needs verification (not admin)
+        // Check if user needs verification (not admin and not student from API)
         const isAdmin = data?.user?.user_metadata?.role === 'Administrator' || data?.user?.user_metadata?.role === 'Admin';
-        if (!isAdmin) {
+        const isStudent = data?.user?.user_metadata?.is_student;
+
+        if (!isAdmin && !isStudent) {
           navigate('/settings?tab=verification');
         } else {
           navigate('/');
         }
       }, 1500);
-      
+
     } catch (error) {
       setErrors({ general: 'Login failed. Please try again.' });
     } finally {
@@ -121,7 +194,7 @@ const Login = () => {
       {/* Subtle background logo */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden">
         <div className="text-[#3B82F6] opacity-5 text-[6rem] sm:text-[12rem] md:text-[16rem] lg:text-[20rem] font-black tracking-wider select-none whitespace-nowrap">
-          EVENTEASE
+          GCEVENTS
         </div>
       </div>
 
@@ -176,7 +249,7 @@ const Login = () => {
                   {/* Email Field */}
                   <div>
                     <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                      Email
+                      Email or Student ID
                     </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -189,10 +262,9 @@ const Login = () => {
                         autoComplete="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                          errors.email ? 'border-red-500' : 'border-gray-300'
-                        }`}
-                        placeholder="Enter your email"
+                        className={`block w-full pl-10 pr-3 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${errors.email ? 'border-red-500' : 'border-gray-300'
+                          }`}
+                        placeholder="Enter your email or Student ID"
                       />
                     </div>
                     {errors.email && (
@@ -216,9 +288,8 @@ const Login = () => {
                         autoComplete="current-password"
                         value={formData.password}
                         onChange={handleChange}
-                        className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                          errors.password ? 'border-red-500' : 'border-gray-300'
-                        }`}
+                        className={`block w-full pl-10 pr-12 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${errors.password ? 'border-red-500' : 'border-gray-300'
+                          }`}
                         placeholder="Enter your password"
                       />
                       <button
@@ -280,8 +351,8 @@ const Login = () => {
                   <div className="text-center">
                     <p className="text-sm text-gray-600">
                       Don't have an account?{' '}
-                      <Link 
-                        to="/signup" 
+                      <Link
+                        to="/signup"
                         className="font-medium text-blue-600 hover:text-blue-500 transition-colors"
                       >
                         Sign up here
@@ -293,7 +364,7 @@ const Login = () => {
             </div>
 
             {/* Demo Credentials */}
-            
+
           </div>
         </div>
 
@@ -302,7 +373,7 @@ const Login = () => {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <p className="text-sm text-gray-600">
-                © 2025 EventEase. All rights reserved. | Your ultimate event management solution.
+                © 2025 {appConfig.name}. All rights reserved. | Your ultimate event management solution.
               </p>
             </div>
           </div>

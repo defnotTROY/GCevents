@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase';
+import { appConfig } from '../config/appConfig';
 
 /**
  * Smart Notification Service
@@ -14,7 +15,7 @@ class NotificationService {
   async getNotifications(userId, options = {}) {
     try {
       const { limit = 50, unreadOnly = false, priority = null } = options;
-      
+
       let query = supabase
         .from('notifications')
         .select('*')
@@ -101,7 +102,7 @@ class NotificationService {
         .single();
 
       if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows returned
-      
+
       // Return default preferences if none exist
       if (!data) {
         return {
@@ -208,7 +209,7 @@ class NotificationService {
   async generateSmartNotifications(userId) {
     try {
       const notifications = [];
-      
+
       // Get user preferences
       const { data: preferences } = await this.getPreferences(userId);
       if (!preferences) return { data: [], error: null };
@@ -484,7 +485,7 @@ class NotificationService {
     try {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      
+
       const { count, error } = await supabase
         .from('notifications')
         .select('id', { count: 'exact', head: true })
@@ -542,7 +543,7 @@ class NotificationService {
   }
 
   generateTimelySuggestionMessage(event, interests) {
-    const artistMatch = interests.tags?.find(tag => 
+    const artistMatch = interests.tags?.find(tag =>
       event.title.toLowerCase().includes(tag.toLowerCase()) ||
       event.description?.toLowerCase().includes(tag.toLowerCase())
     );
@@ -634,7 +635,7 @@ class NotificationService {
         user_id: userId,
         type: 'reminder',
         title: 'Event Reminder',
-        message: daysUntil === 0 
+        message: daysUntil === 0
           ? `"${event.title}" is happening today!`
           : `"${event.title}" is in ${daysUntil} day${daysUntil > 1 ? 's' : ''}`,
         priority: daysUntil <= 1 ? 'high' : 'medium',
@@ -666,7 +667,7 @@ class NotificationService {
    */
   async createEventUpdateNotification(userId, event, changes) {
     try {
-      const changeText = changes.length > 1 
+      const changeText = changes.length > 1
         ? `${changes.length} updates made`
         : changes[0];
 
@@ -732,7 +733,7 @@ class NotificationService {
               user_id: userId,
               type: 'reminder',
               title: daysUntil === 0 ? '🎉 Event Today!' : `⏰ Event in ${daysUntil} day${daysUntil > 1 ? 's' : ''}`,
-              message: daysUntil === 0 
+              message: daysUntil === 0
                 ? `"${event.title}" is happening today! Don't forget to attend.`
                 : `"${event.title}" is coming up on ${new Date(event.date).toLocaleDateString()}.`,
               priority: daysUntil <= 1 ? 'high' : 'medium',
@@ -811,8 +812,8 @@ class NotificationService {
       const notification = {
         user_id: userId,
         type: 'system_alert',
-        title: 'Welcome to EventEase!',
-        message: `Hey ${userName || 'there'}! Welcome to EventEase. Explore events, register, and stay connected.`,
+        title: `Welcome to ${appConfig.name}!`,
+        message: `Hey ${userName || 'there'}! Welcome to ${appConfig.name}. Explore events, register, and stay connected.`,
         priority: 'medium',
         action_url: '/events',
         metadata: {

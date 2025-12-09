@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { 
-  Home, 
-  Calendar, 
-  Plus, 
-  BarChart3, 
-  Users, 
-  Settings, 
+import {
+  Home,
+  Calendar,
+  Plus,
+  BarChart3,
+  Users,
+  Settings,
   QrCode,
   FileText,
   X,
@@ -61,7 +61,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { name: 'Create Event', href: '/create-event', icon: Plus, requires: 'organizer' },
     { name: 'Analytics', href: '/analytics', icon: BarChart3, requires: 'organizer' },
     { name: 'Participants', href: '/participants', icon: Users, requires: 'organizer' },
-   
+
   ];
 
   // Admin-only navigation items
@@ -74,19 +74,19 @@ const Sidebar = ({ isOpen, onClose }) => {
   ];
 
   // Navigation with role-based filtering
-  const navigation = user 
+  const navigation = user
     ? [
-        ...baseNavigation,
-        ...organizerNavigation.filter(item => {
-          if (item.requires === 'organizer') {
-            return canCreateEvents(user);
-          }
-          return true;
-        }),
-        // Add admin navigation if user is admin (with separator)
-        ...(isAdmin ? [{ name: '---', href: '#', icon: null, separator: true }, ...adminNavigation] : []),
-        { name: 'Settings', href: '/settings', icon: Settings }
-      ]
+      ...baseNavigation,
+      ...organizerNavigation.filter(item => {
+        if (item.requires === 'organizer') {
+          return canCreateEvents(user);
+        }
+        return true;
+      }),
+      // Add admin navigation if user is admin (with separator)
+      ...(isAdmin ? [{ name: '---', href: '#', icon: null, separator: true }, ...adminNavigation] : []),
+      { name: 'Settings', href: '/settings', icon: Settings }
+    ]
     : baseNavigation;
 
   const features = [
@@ -127,7 +127,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     if (!userQRData || !user) return;
     qrCodeService.downloadQRCode(
       userQRData.dataURL,
-      `eventease-user-qr-${user.email?.split('@')[0] || 'profile'}.png`
+      `gcevents-user-qr-${user.email?.split('@')[0] || 'profile'}.png`
     );
   };
 
@@ -147,7 +147,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     <>
       {/* Mobile overlay */}
       {isOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-gray-600 bg-opacity-75 z-40 lg:hidden"
           onClick={onClose}
         />
@@ -161,7 +161,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className="flex items-center justify-between h-16 px-6 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-primary-600">EventEase</h2>
+            <h2 className="text-xl font-bold text-primary-600">{appConfig.name}</h2>
             <button
               onClick={onClose}
               className="lg:hidden p-1 rounded-md text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -186,15 +186,15 @@ const Sidebar = ({ isOpen, onClose }) => {
 
                 const isActive = location.pathname === item.href;
                 const IconComponent = item.icon;
-                
+
                 return (
                   <Link
                     key={item.name}
                     to={item.href}
                     className={`
                       flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200
-                      ${isActive 
-                        ? 'bg-primary-100 text-primary-700' 
+                      ${isActive
+                        ? 'bg-primary-100 text-primary-700'
                         : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                       }
                     `}
@@ -221,8 +221,8 @@ const Sidebar = ({ isOpen, onClose }) => {
                       to={item.href}
                       className={`
                         flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-200
-                        ${isActive 
-                          ? 'bg-red-100 text-red-700' 
+                        ${isActive
+                          ? 'bg-red-100 text-red-700'
                           : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
                         }
                       `}
@@ -294,7 +294,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       </div>
 
       {showUserQRModal && (
-        <div 
+        <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-50 p-3 sm:p-4"
           onClick={(e) => {
             // Close modal when clicking outside the modal content
@@ -303,7 +303,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             }
           }}
         >
-          <div 
+          <div
             className="bg-white rounded-lg shadow-xl w-full max-w-[calc(100vw-24px)] sm:max-w-md max-h-[90vh] overflow-y-auto relative"
             onClick={(e) => e.stopPropagation()}
           >
@@ -311,7 +311,7 @@ const Sidebar = ({ isOpen, onClose }) => {
             <div className="flex items-start justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-gray-200 gap-3">
               <div className="min-w-0">
                 <h3 className="text-base sm:text-lg font-semibold text-gray-900">Your Check-in QR</h3>
-                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Use this code to check in to any EventEase event.</p>
+                <p className="text-xs sm:text-sm text-gray-500 mt-0.5">Use this code to check in to any {appConfig.name} event.</p>
               </div>
               <button
                 onClick={() => setShowUserQRModal(false)}

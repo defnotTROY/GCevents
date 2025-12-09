@@ -1,6 +1,6 @@
-# EventEase Python Backend
+# GCevents Python Backend
 
-A modern, AI-powered backend API for EventEase built with FastAPI and Python.
+A modern, AI-powered backend API for GCevents built with FastAPI and Python.
 
 ## 🚀 Features
 
@@ -274,4 +274,4 @@ For support and questions:
 
 ---
 
-**EventEase Python Backend** - Smart event management with AI! 🎉
+**GCevents Python Backend** - Smart event management with AI! 🎉

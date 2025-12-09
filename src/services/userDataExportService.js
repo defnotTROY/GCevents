@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { jsPDF } from 'jspdf';
+import { appConfig } from '../config/appConfig';
 
 /**
  * User Data Export Service
@@ -193,7 +194,7 @@ class UserDataExportService {
     try {
       // Fetch all data
       const data = await this.fetchAllUserData(userId, user);
-      
+
       // Create PDF
       const doc = new jsPDF();
       let yPos = 20;
@@ -238,7 +239,7 @@ class UserDataExportService {
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(59, 130, 246);
-      doc.text('EventEase - My Data Export', margin, yPos);
+      doc.text(`${appConfig.name} - My Data Export`, margin, yPos);
       yPos += 10;
 
       doc.setFontSize(10);
@@ -294,17 +295,17 @@ class UserDataExportService {
           checkPageBreak(35);
           doc.setFillColor(245, 245, 245);
           doc.rect(margin, yPos - 2, contentWidth, 28, 'F');
-          
+
           doc.setFontSize(11);
           doc.setFont('helvetica', 'bold');
           doc.text(`${index + 1}. ${event.eventTitle}`, margin + 3, yPos + 4);
-          
+
           doc.setFontSize(9);
           doc.setFont('helvetica', 'normal');
           doc.text(`Date: ${this.formatDate(event.eventDate)} at ${event.eventTime}`, margin + 3, yPos + 11);
           doc.text(`Location: ${event.eventLocation}`, margin + 3, yPos + 17);
           doc.text(`Registration: ${this.formatDate(event.registrationDate)} | Status: ${this.capitalizeFirst(event.registrationStatus)}`, margin + 3, yPos + 23);
-          
+
           yPos += 32;
         });
       } else {
@@ -321,18 +322,18 @@ class UserDataExportService {
           checkPageBreak(45);
           doc.setFillColor(245, 245, 245);
           doc.rect(margin, yPos - 2, contentWidth, 35, 'F');
-          
+
           doc.setFontSize(11);
           doc.setFont('helvetica', 'bold');
           doc.text(`${index + 1}. ${event.title}`, margin + 3, yPos + 4);
-          
+
           doc.setFontSize(9);
           doc.setFont('helvetica', 'normal');
           doc.text(`Date: ${this.formatDate(event.date)} at ${event.time}`, margin + 3, yPos + 11);
           doc.text(`Location: ${event.location} | Category: ${event.category}`, margin + 3, yPos + 17);
           doc.text(`Status: ${this.capitalizeFirst(event.status)} | Participants: ${event.participantCount}/${event.maxParticipants}`, margin + 3, yPos + 23);
           doc.text(`Created: ${this.formatDate(event.createdAt)}`, margin + 3, yPos + 29);
-          
+
           yPos += 40;
 
           // Add participant list if any
@@ -342,14 +343,14 @@ class UserDataExportService {
             doc.setFont('helvetica', 'bold');
             doc.text('Participants:', margin + 5, yPos);
             yPos += 6;
-            
+
             event.participants.slice(0, 10).forEach((p) => {
               checkPageBreak(6);
               doc.setFont('helvetica', 'normal');
               doc.text(`• ${p.name} (${p.email}) - ${this.capitalizeFirst(p.status)}`, margin + 8, yPos);
               yPos += 5;
             });
-            
+
             if (event.participants.length > 10) {
               doc.text(`... and ${event.participants.length - 10} more`, margin + 8, yPos);
               yPos += 5;
@@ -366,7 +367,7 @@ class UserDataExportService {
         doc.setFontSize(8);
         doc.setTextColor(150, 150, 150);
         doc.text(
-          `Page ${i} of ${pageCount} | EventEase Data Export | Confidential`,
+          `Page ${i} of ${pageCount} | ${appConfig.name} Data Export | Confidential`,
           pageWidth / 2,
           290,
           { align: 'center' }
@@ -374,7 +375,7 @@ class UserDataExportService {
       }
 
       // Download
-      const fileName = `EventEase_MyData_${data.profile.firstName}_${new Date().toISOString().split('T')[0]}.pdf`;
+      const fileName = `${appConfig.name}_MyData_${data.profile.firstName}_${new Date().toISOString().split('T')[0]}.pdf`;
       doc.save(fileName);
 
       return { success: true, fileName };

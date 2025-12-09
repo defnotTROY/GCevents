@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { 
-  User, 
-  Bell, 
-  Shield, 
-  Save, 
+import {
+  User,
+  Bell,
+  Shield,
+  Save,
   Eye,
   EyeOff,
   Check,
@@ -20,6 +20,7 @@ import { verificationService } from '../services/verificationService';
 import { userDataExportService } from '../services/userDataExportService';
 import { useToast } from '../contexts/ToastContext';
 import UserQRCode from '../components/UserQRCode';
+import { appConfig } from '../config/appConfig';
 import { Upload, FileText, CheckCircle, XCircle, Clock, AlertCircle, ShieldCheck } from 'lucide-react';
 
 const Settings = () => {
@@ -104,12 +105,12 @@ const Settings = () => {
   const languages = ['English', 'Spanish', 'French', 'German', 'Chinese', 'Japanese', 'Korean', 'Arabic'];
 
   const countries = [
-    'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Bangladesh', 'Belgium', 
-    'Brazil', 'Canada', 'Chile', 'China', 'Colombia', 'Croatia', 'Czech Republic', 'Denmark', 'Egypt', 
-    'Finland', 'France', 'Germany', 'Greece', 'Hong Kong', 'Hungary', 'India', 'Indonesia', 'Ireland', 
-    'Israel', 'Italy', 'Japan', 'Kenya', 'Malaysia', 'Mexico', 'Netherlands', 'New Zealand', 'Nigeria', 
-    'Norway', 'Pakistan', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Romania', 'Russia', 'Saudi Arabia', 
-    'Singapore', 'South Africa', 'South Korea', 'Spain', 'Sweden', 'Switzerland', 'Taiwan', 'Thailand', 
+    'Afghanistan', 'Albania', 'Algeria', 'Argentina', 'Australia', 'Austria', 'Bangladesh', 'Belgium',
+    'Brazil', 'Canada', 'Chile', 'China', 'Colombia', 'Croatia', 'Czech Republic', 'Denmark', 'Egypt',
+    'Finland', 'France', 'Germany', 'Greece', 'Hong Kong', 'Hungary', 'India', 'Indonesia', 'Ireland',
+    'Israel', 'Italy', 'Japan', 'Kenya', 'Malaysia', 'Mexico', 'Netherlands', 'New Zealand', 'Nigeria',
+    'Norway', 'Pakistan', 'Peru', 'Philippines', 'Poland', 'Portugal', 'Romania', 'Russia', 'Saudi Arabia',
+    'Singapore', 'South Africa', 'South Korea', 'Spain', 'Sweden', 'Switzerland', 'Taiwan', 'Thailand',
     'Turkey', 'Ukraine', 'United Arab Emirates', 'United Kingdom', 'United States', 'Vietnam', 'Other'
   ];
 
@@ -130,13 +131,13 @@ const Settings = () => {
           navigate('/login');
           return;
         }
-        
+
         setUser(user);
-        
+
         // Check if user is admin
         const adminStatus = user.user_metadata?.role === 'Administrator' || user.user_metadata?.role === 'Admin';
         setIsAdmin(adminStatus);
-        
+
         // Load user profile data
         setProfileData(prev => ({
           ...prev,
@@ -186,7 +187,7 @@ const Settings = () => {
         // Load verification status
         const { data: verificationData } = await verificationService.getVerification(user.id);
         setVerification(verificationData);
-        
+
       } catch (error) {
         console.error('Error loading user:', error);
         navigate('/login');
@@ -208,35 +209,35 @@ const Settings = () => {
 
   const handlePasswordChange = async () => {
     setPasswordError('');
-    
+
     // Validate passwords
     if (passwordData.newPassword !== passwordData.confirmPassword) {
       setPasswordError('New passwords do not match');
       return;
     }
-    
+
     if (passwordData.newPassword.length < 6) {
       setPasswordError('New password must be at least 6 characters');
       return;
     }
-    
+
     try {
       const { error } = await auth.updateUser({
         password: passwordData.newPassword
       });
-      
+
       if (error) throw error;
-      
+
       // Send custom password change notification
       await sendPasswordChangeNotification();
-      
+
       success('Your password has been changed successfully. You will receive an email confirmation shortly.');
       setPasswordData({
         currentPassword: '',
         newPassword: '',
         confirmPassword: ''
       });
-      
+
     } catch (error) {
       console.error('Error changing password:', error);
       setPasswordError(error.message || 'Failed to change password');
@@ -248,10 +249,10 @@ const Settings = () => {
       // This would typically call your backend API to send email
       // For now, we'll just log it - you can implement email service later
       console.log('Password change notification would be sent to:', user?.email);
-      
+
       // TODO: Implement actual email sending service
       // Example: await emailService.sendPasswordChangeNotification(user.email);
-      
+
     } catch (error) {
       console.error('Error sending password change notification:', error);
       // Don't throw error here - password change was successful
@@ -260,7 +261,7 @@ const Settings = () => {
 
   const handleSave = async () => {
     if (!user) return;
-    
+
     setSaving(true);
     try {
       // Save notification preferences
@@ -300,10 +301,10 @@ const Settings = () => {
       });
 
       if (error) throw error;
-      
+
       console.log('Settings saved successfully');
       success('Your settings have been saved successfully.');
-      
+
     } catch (error) {
       console.error('Error saving settings:', error);
       showError('Unable to save settings at this time. Please try again later.');
@@ -323,13 +324,12 @@ const Settings = () => {
 
       {/* Verification Status Badge */}
       {verification && (
-        <div className={`p-4 rounded-lg border ${
-          verification.status === 'approved' 
-            ? 'bg-green-50 border-green-200' 
+        <div className={`p-4 rounded-lg border ${verification.status === 'approved'
+            ? 'bg-green-50 border-green-200'
             : verification.status === 'rejected'
-            ? 'bg-red-50 border-red-200'
-            : 'bg-yellow-50 border-yellow-200'
-        }`}>
+              ? 'bg-red-50 border-red-200'
+              : 'bg-yellow-50 border-yellow-200'
+          }`}>
           <div className="flex items-center space-x-3">
             {verification.status === 'approved' ? (
               <CheckCircle className="text-green-600" size={24} />
@@ -339,27 +339,25 @@ const Settings = () => {
               <Clock className="text-yellow-600" size={24} />
             )}
             <div className="flex-1">
-              <h4 className={`font-semibold ${
-                verification.status === 'approved' 
-                  ? 'text-green-900' 
+              <h4 className={`font-semibold ${verification.status === 'approved'
+                  ? 'text-green-900'
                   : verification.status === 'rejected'
-                  ? 'text-red-900'
-                  : 'text-yellow-900'
-              }`}>
+                    ? 'text-red-900'
+                    : 'text-yellow-900'
+                }`}>
                 Verification Status: {verification.status === 'approved' ? 'Verified' : verification.status === 'rejected' ? 'Rejected' : verification.status === 'pending' ? 'Pending Review' : 'Under Review'}
               </h4>
-              <p className={`text-sm mt-1 ${
-                verification.status === 'approved' 
-                  ? 'text-green-800' 
+              <p className={`text-sm mt-1 ${verification.status === 'approved'
+                  ? 'text-green-800'
                   : verification.status === 'rejected'
-                  ? 'text-red-800'
-                  : 'text-yellow-800'
-              }`}>
-                {verification.status === 'approved' 
+                    ? 'text-red-800'
+                    : 'text-yellow-800'
+                }`}>
+                {verification.status === 'approved'
                   ? 'Your profile is verified. You can register for events that require verification.'
                   : verification.status === 'rejected'
-                  ? 'Your verification was rejected. Please resubmit with correct documents.'
-                  : 'Your verification is being reviewed by an administrator.'}
+                    ? 'Your verification was rejected. Please resubmit with correct documents.'
+                    : 'Your verification is being reviewed by an administrator.'}
               </p>
             </div>
           </div>
@@ -533,11 +531,10 @@ const Settings = () => {
                     />
                     <label
                       htmlFor="verification-upload"
-                      className={`cursor-pointer px-4 py-2 rounded-lg ${
-                        verificationLoading
+                      className={`cursor-pointer px-4 py-2 rounded-lg ${verificationLoading
                           ? 'bg-gray-400 text-white cursor-not-allowed'
                           : 'bg-primary-600 text-white hover:bg-primary-700'
-                      }`}
+                        }`}
                     >
                       {verificationLoading ? (
                         <div className="flex items-center">
@@ -935,7 +932,7 @@ const Settings = () => {
             <div className="space-y-4">
               <h3 className="text-lg font-medium text-gray-900">Notification Preferences</h3>
               <p className="text-sm text-gray-600">Control which notifications you receive in the app.</p>
-              
+
               {/* Push Notifications */}
               <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                 <div>
@@ -955,7 +952,7 @@ const Settings = () => {
                     onChange={async (e) => {
                       const newValue = e.target.checked;
                       handleInputChange('notifications', 'pushNotifications', newValue);
-                      
+
                       if (newValue && pushNotificationSupported) {
                         try {
                           await pushNotificationService.subscribe(user.id);
@@ -1037,7 +1034,7 @@ const Settings = () => {
             {/* Notification Limits */}
             <div className="space-y-4 border-t border-gray-200 pt-6">
               <h3 className="text-lg font-medium text-gray-900">Notification Controls</h3>
-              
+
               {/* Max Daily Notifications */}
               <div className="p-4 border border-gray-200 rounded-lg">
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1073,7 +1070,7 @@ const Settings = () => {
             {/* Quiet Hours */}
             <div className="space-y-4 border-t border-gray-200 pt-6">
               <h3 className="text-lg font-medium text-gray-900">Quiet Hours</h3>
-              
+
               <div className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
                 <div>
                   <h4 className="font-medium text-gray-900">Enable Quiet Hours</h4>
@@ -1092,7 +1089,7 @@ const Settings = () => {
                   <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary-600"></div>
                 </label>
               </div>
-              
+
               {smartNotificationPreferences.quiet_hours.enabled && (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -1163,7 +1160,7 @@ const Settings = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     New Password
@@ -1176,7 +1173,7 @@ const Settings = () => {
                     placeholder="Enter new password (min. 6 characters)"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Confirm New Password
@@ -1198,13 +1195,13 @@ const Settings = () => {
                     </button>
                   </div>
                 </div>
-                
+
                 {passwordError && (
                   <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm">
                     {passwordError}
                   </div>
                 )}
-                
+
                 <button
                   onClick={handlePasswordChange}
                   disabled={!passwordData.newPassword || !passwordData.confirmPassword}
@@ -1247,9 +1244,9 @@ const Settings = () => {
             {/* Download My Data */}
             <div className="space-y-4 border-t border-gray-200 pt-6">
               <h3 className="text-lg font-medium text-gray-900">Download My Data</h3>
-              <p className="text-sm text-gray-600">
-                Download a copy of all your personal data stored in EventEase. This includes your profile information, 
-                registered events, verification status, and any events you've created.
+              <p className="text-gray-600 mb-4">
+                Download a copy of all your personal data stored in {appConfig.name}. This includes your profile information,
+                verification status, and activity logs.
               </p>
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="flex items-start space-x-4">
@@ -1263,14 +1260,14 @@ const Settings = () => {
                       <li>• Account details (created date, last sign in)</li>
                       <li>• All events you've registered for</li>
                       <li>• Verification status and history</li>
-                      {(user?.user_metadata?.role === 'Organizer' || 
-                        user?.user_metadata?.role === 'Administrator' || 
+                      {(user?.user_metadata?.role === 'Organizer' ||
+                        user?.user_metadata?.role === 'Administrator' ||
                         user?.user_metadata?.role === 'Admin') && (
-                        <>
-                          <li>• Events you've created</li>
-                          <li>• Participant lists for your events</li>
-                        </>
-                      )}
+                          <>
+                            <li>• Events you've created</li>
+                            <li>• Participant lists for your events</li>
+                          </>
+                        )}
                     </ul>
                   </div>
                 </div>
@@ -1341,8 +1338,8 @@ const Settings = () => {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">Settings</h1>
               <p className="text-sm sm:text-base text-gray-600 mt-1 break-words">Manage your account preferences and system configuration</p>
             </div>
-            <button 
-              onClick={handleSave} 
+            <button
+              onClick={handleSave}
               disabled={saving || loading}
               className="btn-primary flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap self-start sm:self-auto"
             >
@@ -1367,11 +1364,10 @@ const Settings = () => {
                         setActiveTab(tab.id);
                         navigate(`/settings?tab=${tab.id}`, { replace: true });
                       }}
-                      className={`py-4 px-1 border-b-2 font-medium text-sm capitalize flex items-center whitespace-nowrap transition-colors ${
-                        activeTab === tab.id
+                      className={`py-4 px-1 border-b-2 font-medium text-sm capitalize flex items-center whitespace-nowrap transition-colors ${activeTab === tab.id
                           ? 'border-primary-500 text-primary-600'
                           : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                      }`}
+                        }`}
                     >
                       <tab.icon size={18} className="mr-2 flex-shrink-0" />
                       <span>{tab.name}</span>

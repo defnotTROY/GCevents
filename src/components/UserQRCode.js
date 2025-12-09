@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  QrCode, 
-  Download, 
-  RefreshCw, 
-  User, 
+import {
+  QrCode,
+  Download,
+  RefreshCw,
+  User,
   Calendar,
   Loader2,
   Copy,
@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { qrCodeService } from '../services/qrCodeService';
 import { auth } from '../lib/supabase';
+import { appConfig } from '../config/appConfig';
 
 const UserQRCode = () => {
   const [qrCodeData, setQrCodeData] = useState(null);
@@ -61,7 +62,7 @@ const UserQRCode = () => {
     if (qrCodeData) {
       qrCodeService.downloadQRCode(
         qrCodeData.dataURL,
-        `eventease-user-qr-${user?.email?.split('@')[0] || 'profile'}.png`
+        `gcevents-user-qr-${user?.email?.split('@')[0] || 'profile'}.png`
       );
     }
   };
@@ -167,14 +168,14 @@ const UserQRCode = () => {
             </div>
           </div>
 
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <h5 className="font-medium text-blue-900 mb-2">QR Code Information</h5>
-              <div className="text-sm text-blue-800 space-y-1">
-                <p><strong>User ID:</strong> {qrCodeData?.userData?.userId}</p>
-                <p><strong>Email:</strong> {qrCodeData?.userData?.email}</p>
-                <p><strong>Version:</strong> {qrCodeData?.userData?.version}</p>
-              </div>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <h5 className="font-medium text-blue-900 mb-2">QR Code Information</h5>
+            <div className="text-sm text-blue-800 space-y-1">
+              <p><strong>User ID:</strong> {qrCodeData?.userData?.userId}</p>
+              <p><strong>Email:</strong> {qrCodeData?.userData?.email}</p>
+              <p><strong>Version:</strong> {qrCodeData?.userData?.version}</p>
             </div>
+          </div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button
@@ -206,8 +207,8 @@ const UserQRCode = () => {
         <div className="mt-6 p-4 bg-gray-50 rounded-lg">
           <h5 className="font-medium text-gray-900 mb-2">Security Note</h5>
           <p className="text-sm text-gray-600">
-            This QR code contains your user ID and email. Only share it with trusted event organizers 
-            or use it at official EventEase events. The QR code is unique to your account and can be 
+            This QR code contains your user ID and email. Only share it with trusted event organizers
+            or use it at official {appConfig.name} events. The QR code is unique to your account and can be
             used to identify you at events.
           </p>
         </div>

@@ -1,5 +1,5 @@
 """
-User model for EventEase
+User model for GCevents
 """
 
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, JSON, Text

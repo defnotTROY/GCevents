@@ -135,16 +135,16 @@ const Landing = () => {
             <div className="flex justify-center mb-6">
               <div className="inline-flex items-center px-4 py-2 bg-primary-100 text-primary-700 rounded-full text-sm font-medium">
                 <Sparkles className="h-4 w-4 mr-2" />
-                Smart Event Management Platform
+                Smart Event Management Platform for setup
               </div>
             </div>
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6">
-              Smart Event Management
+              Gordon College
               <br />
-              <span className="text-primary-600">Made Simple</span>
+              <span className="text-primary-600">Event Management</span>
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 mb-8 max-w-3xl mx-auto">
-              {appConfig.description}
+              Exclusive to the Global Gordon College Community. Manage, join, and track events with ease.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
@@ -280,7 +280,7 @@ const Landing = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="text-4xl font-bold mb-2">100%</div>
-              <div className="text-primary-100">Secure & Verified</div>
+              <div className="text-primary-100">Exclusive to GC</div>
             </div>
             <div className="text-center">
               <div className="text-4xl font-bold mb-2">Real-time</div>
@@ -308,7 +308,7 @@ const Landing = () => {
               to="/signup"
               className="inline-flex items-center justify-center px-8 py-4 bg-primary-600 text-white rounded-lg hover:bg-primary-700 font-semibold text-lg transition-all transform hover:scale-105 shadow-lg"
             >
-                Get Started Free
+              Get Started Free
               <ArrowRight className="ml-2 h-5 w-5" />
             </Link>
             <Link
@@ -373,7 +373,7 @@ const Landing = () => {
           </div>
           <div className="border-t border-gray-800 pt-8 text-center text-sm text-gray-400">
             <p>&copy; {new Date().getFullYear()} {appConfig.name}. All rights reserved.</p>
-            <p className="mt-2">{appConfig.features.aiEnabled && appConfig.features.cloudEnabled ? 'Powered by AI & Cloud' : 'Powered by EventEase'}</p>
+            <p className="mt-2">{appConfig.features.aiEnabled && appConfig.features.cloudEnabled ? 'Powered by AI & Cloud' : 'Powered by GCevents'}</p>
           </div>
         </div>
       </footer>

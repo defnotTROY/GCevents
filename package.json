@@ -1,5 +1,5 @@
 {
-  "name": "eventease",
+  "name": "gcevents",
   "version": "1.0.0",
   "description": "A Smart Event Management and Engagement Platform Using AI and Cloud Integration",
   "main": "index.js",
@@ -39,5 +39,6 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
-  }
+  },
+  "proxy": "https://class-list-eight.vercel.app"
 }

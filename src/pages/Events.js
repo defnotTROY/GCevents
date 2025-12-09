@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Search, 
-  Filter, 
-  Calendar, 
-  MapPin, 
-  Users, 
-  Eye, 
-  Edit, 
+import {
+  Search,
+  Filter,
+  Calendar,
+  MapPin,
+  Users,
+  Eye,
+  Edit,
   Trash2,
   MoreVertical,
   QrCode,
@@ -19,6 +19,7 @@ import { auth } from '../lib/supabase';
 import { eventsService } from '../services/eventsService';
 import { statusService } from '../services/statusService';
 import { useToast } from '../contexts/ToastContext';
+import { DEPARTMENTS, getDepartmentName } from '../config/departments';
 
 const Events = () => {
   const navigate = useNavigate();
@@ -38,8 +39,8 @@ const Events = () => {
   // Check if user can edit/delete an event
   const canManageEvent = (event) => {
     if (!user) return false;
-    const isOrganizerOrAdmin = userRole === 'Organizer' || userRole === 'organizer' || 
-                                userRole === 'Administrator' || userRole === 'admin';
+    const isOrganizerOrAdmin = userRole === 'Organizer' || userRole === 'organizer' ||
+      userRole === 'Administrator' || userRole === 'admin';
     const isEventOwner = event.user_id === user.id;
     return isOrganizerOrAdmin || isEventOwner;
   };
@@ -53,25 +54,15 @@ const Events = () => {
   ], []);
 
   const categoryOptions = useMemo(() => {
-    const uniqueCategories = new Set();
-    events.forEach((event) => {
-      if (event?.category) {
-        uniqueCategories.add(event.category);
-      }
-    });
-
-    return ['all', ...Array.from(uniqueCategories).sort((a, b) => a.localeCompare(b))];
-  }, [events]);
+    const options = DEPARTMENTS.map(d => ({ value: d.id, label: d.name }));
+    return [{ value: 'all', label: 'All Departments' }, ...options];
+  }, []);
 
   const ensureSelectionInOptions = useCallback(() => {
-    if (selectedCategory !== 'all' && !categoryOptions.includes(selectedCategory)) {
-      setSelectedCategory('all');
-    }
-
     if (selectedStatus !== 'all' && !statusOptions.some((option) => option.value === selectedStatus)) {
       setSelectedStatus('all');
     }
-  }, [categoryOptions, selectedCategory, selectedStatus, statusOptions]);
+  }, [selectedStatus, statusOptions]);
 
   useEffect(() => {
     ensureSelectionInOptions();
@@ -91,10 +82,10 @@ const Events = () => {
     try {
       const { data, error } = await statusService.autoUpdateAllStatuses(user.id);
       if (error) throw error;
-      
+
       // Reload events
       await loadEvents();
-      
+
       if (data.updated > 0) {
         toast.success(`Successfully updated ${data.updated} event status${data.updated === 1 ? '' : 'es'} automatically.`);
       } else {
@@ -133,11 +124,11 @@ const Events = () => {
     try {
       setLoading(true);
       const { data, error } = await eventsService.getAllEvents();
-      
+
       if (error) throw error;
-      
+
       setEvents(data || []);
-      
+
       // Load participant counts for each event
       if (data && data.length > 0) {
         const counts = {};
@@ -161,11 +152,11 @@ const Events = () => {
   // Handle event deletion
   const handleDeleteEvent = async (eventId) => {
     if (!window.confirm('Are you sure you want to delete this event? This action cannot be undone.')) return;
-    
+
     try {
       const { error } = await eventsService.deleteEvent(eventId);
       if (error) throw error;
-      
+
       // Reload events
       await loadEvents();
     } catch (error) {
@@ -215,10 +206,10 @@ const Events = () => {
 
   const filteredEvents = events.filter(event => {
     const matchesSearch = event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         event.description.toLowerCase().includes(searchQuery.toLowerCase());
+      event.description.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = selectedCategory === 'all' || event.category === selectedCategory;
     const matchesStatus = selectedStatus === 'all' || statusService.calculateEventStatus(event) === selectedStatus || event.status === selectedStatus;
-    
+
     return matchesSearch && matchesCategory && matchesStatus;
   });
 
@@ -267,7 +258,7 @@ const Events = () => {
         </div>
         <h3 className="text-lg font-medium text-gray-900 mb-2">Error Loading Events</h3>
         <p className="text-gray-500 mb-6">{error}</p>
-        <button 
+        <button
           onClick={() => loadEvents()}
           className="btn-primary"
         >
@@ -306,16 +297,16 @@ const Events = () => {
 
           {/* Filters Row */}
           <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
-            {/* Category Filter */}
+            {/* Department Filter */}
             <div className="flex-1 sm:flex-initial sm:w-44 lg:w-48">
               <select
                 value={selectedCategory}
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
-                {categoryOptions.map(category => (
-                  <option key={category} value={category}>
-                    {category === 'all' ? 'All Categories' : category}
+                {categoryOptions.map(option => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
                   </option>
                 ))}
               </select>
@@ -340,21 +331,19 @@ const Events = () => {
             <div className="flex border border-gray-300 rounded-lg overflow-hidden self-start">
               <button
                 onClick={() => setViewMode('grid')}
-                className={`px-3 py-2 text-sm font-medium ${
-                  viewMode === 'grid' 
-                    ? 'bg-primary-600 text-white' 
+                className={`px-3 py-2 text-sm font-medium ${viewMode === 'grid'
+                    ? 'bg-primary-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 Grid
               </button>
               <button
                 onClick={() => setViewMode('list')}
-                className={`px-3 py-2 text-sm font-medium ${
-                  viewMode === 'list' 
-                    ? 'bg-primary-600 text-white' 
+                className={`px-3 py-2 text-sm font-medium ${viewMode === 'list'
+                    ? 'bg-primary-600 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-50'
-                }`}
+                  }`}
               >
                 List
               </button>
@@ -367,8 +356,8 @@ const Events = () => {
       {viewMode === 'grid' ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredEvents.map((event) => (
-            <div 
-              key={event.id} 
+            <div
+              key={event.id}
               className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg hover:border-primary-200 transition-all duration-200 cursor-pointer group"
               onClick={() => navigate(`/events/${event.id}`)}
             >
@@ -384,6 +373,12 @@ const Events = () => {
                     {statusService.calculateEventStatus(event)}
                   </span>
                 </div>
+                {/* Department Badge */}
+                <div className="absolute bottom-2 left-2 sm:bottom-3 sm:left-3">
+                  <span className="inline-flex px-2 py-1 text-[10px] sm:text-xs font-semibold rounded-full bg-white/90 text-gray-800 shadow-sm backdrop-blur-sm">
+                    {getDepartmentName(event.category) || 'General'}
+                  </span>
+                </div>
               </div>
 
               {/* Event Content */}
@@ -392,7 +387,7 @@ const Events = () => {
                   {event.title}
                 </h3>
                 <p className="text-gray-600 text-xs sm:text-sm mb-3 sm:mb-4 line-clamp-2">{event.description}</p>
-                
+
                 <div className="space-y-1.5 sm:space-y-2 mb-3 sm:mb-4">
                   <div className="flex items-center text-xs sm:text-sm text-gray-500">
                     <Calendar size={14} className="mr-2 flex-shrink-0" />
@@ -416,7 +411,7 @@ const Events = () => {
                       <span className="font-semibold">{getParticipantPercentage(participantCounts[event.id] || 0, event.max_participants)}%</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3">
-                      <div 
+                      <div
                         className="bg-primary-600 h-2 sm:h-3 rounded-full transition-all duration-500"
                         style={{ width: `${getParticipantPercentage(participantCounts[event.id] || 0, event.max_participants)}%` }}
                       ></div>
@@ -429,11 +424,11 @@ const Events = () => {
                 )}
 
                 {/* Action Buttons */}
-                <div 
+                <div
                   className="flex items-center justify-start gap-1"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <button 
+                  <button
                     onClick={() => navigate(`/events/${event.id}`)}
                     className="p-2 text-gray-600 hover:text-primary-600 hover:bg-primary-50 rounded-lg transition-colors"
                     title="View Event"
@@ -442,14 +437,14 @@ const Events = () => {
                   </button>
                   {canManageEvent(event) && (
                     <>
-                      <button 
+                      <button
                         onClick={() => navigate(`/events/${event.id}/edit`)}
                         className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                         title="Edit Event"
                       >
                         <Edit size={16} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => handleDeleteEvent(event.id)}
                         className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
                         title="Delete Event"
@@ -475,9 +470,8 @@ const Events = () => {
                     <div
                       key={event.id}
                       onClick={() => setSelectedEvent(event)}
-                      className={`px-5 py-4 cursor-pointer transition-colors flex flex-col gap-3 border-l-4 ${
-                        isSelected ? 'bg-primary-50 border-primary-500' : 'border-transparent hover:bg-gray-50'
-                      }`}
+                      className={`px-5 py-4 cursor-pointer transition-colors flex flex-col gap-3 border-l-4 ${isSelected ? 'bg-primary-50 border-primary-500' : 'border-transparent hover:bg-gray-50'
+                        }`}
                     >
                       <div className="flex items-start gap-4">
                         <img
@@ -493,6 +487,9 @@ const Events = () => {
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(statusService.calculateEventStatus(event))}`}>
                               {statusService.calculateEventStatus(event)}
                             </span>
+                          </div>
+                          <div className="text-xs font-medium text-primary-600 mb-0.5">
+                            {getDepartmentName(event.category) || 'General'}
                           </div>
                           <p className="text-sm text-gray-600 line-clamp-2">
                             {event.description}
@@ -605,6 +602,11 @@ const Events = () => {
 
                   <div>
                     <h2 className="text-xl sm:text-2xl font-bold text-gray-900 break-words">{selectedEvent.title}</h2>
+                    <div className="mt-1 mb-2">
+                      <span className="inline-flex px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800">
+                        {getDepartmentName(selectedEvent.category) || 'General'}
+                      </span>
+                    </div>
                     <p className="text-sm sm:text-base text-gray-600 mt-2 leading-relaxed break-words">{selectedEvent.description}</p>
                   </div>
 
@@ -702,7 +704,7 @@ const Events = () => {
           <p className="text-gray-500 mb-6">Try adjusting your search or filter criteria</p>
         </div>
       )}
-      
+
     </div>
   );
 };
