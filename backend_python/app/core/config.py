@@ -4,7 +4,7 @@ Application configuration settings
 
 from pydantic_settings import BaseSettings
 from pydantic import validator
-from typing import List, Optional
+from typing import List, Optional, Union, Any
 import os
 from pathlib import Path
 
@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     
     # CORS Configuration
     FRONTEND_URL: str = "http://localhost:3000"
-    ALLOWED_ORIGINS: List[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    ALLOWED_ORIGINS: Union[List[str], str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
     
     # Rate Limiting
     RATE_LIMIT_PER_MINUTE: int = 60
