@@ -13,8 +13,8 @@ from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
-# SQLAlchemy setup for PostgreSQL (skip if using Supabase)
-if settings.DATABASE_URL and not settings.SUPABASE_URL:
+# SQLAlchemy setup for PostgreSQL
+if settings.DATABASE_URL:
     # Convert sync URL to async URL
     if settings.DATABASE_URL.startswith("postgresql://"):
         async_database_url = settings.DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
@@ -41,7 +41,7 @@ if settings.DATABASE_URL and not settings.SUPABASE_URL:
     # Metadata for migrations
     metadata = MetaData()
 else:
-    # When using Supabase, create dummy values for compatibility
+    # When no DATABASE_URL is set, create dummy values
     engine = None
     Base = declarative_base()  # Still create Base for model definitions
     metadata = MetaData()
