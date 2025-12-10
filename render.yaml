@@ -1,0 +1,56 @@
+services:
+  # Backend API Service
+  - type: web
+    name: gcevents-backend
+    runtime: python
+    region: singapore
+    plan: free
+    branch: main
+    rootDir: backend_python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PORT
+        value: 8000
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: HOST
+        value: 0.0.0.0
+      # Database - Supabase (set these in Render dashboard)
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      # JWT Secret (set in Render dashboard)
+      - key: SECRET_KEY
+        sync: false
+      # CORS - Update with your frontend URL
+      - key: ALLOWED_ORIGINS
+        value: http://localhost:3000,https://gcevents.vercel.app
+      - key: FRONTEND_URL
+        value: https://gcevents.vercel.app
+      # AI Services (optional - set in Render dashboard if needed)
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      # Cloudinary (optional - set in Render dashboard if needed)
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      # Email (optional - set in Render dashboard if needed)
+      - key: SMTP_USERNAME
+        sync: false
+      - key: SMTP_PASSWORD
+        sync: false
+      # Redis (optional - use Render Redis or external)
+      - key: REDIS_URL
+        value: redis://localhost:6379/0
+    healthCheckPath: /health

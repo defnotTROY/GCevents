@@ -75,11 +75,19 @@ class Settings(BaseSettings):
     
     @validator("ALLOWED_ORIGINS", pre=True)
     def assemble_cors_origins(cls, v):
+        # Handle empty or None values
+        if not v or v == "":
+            return ["http://localhost:3000"]  # Safe default for development
+        
+        # Handle comma-separated string
         if isinstance(v, str) and not v.startswith("["):
-            return [i.strip() for i in v.split(",")]
+            return [i.strip() for i in v.split(",") if i.strip()]
+        
+        # Handle list or JSON string
         elif isinstance(v, (list, str)):
             return v
-        raise ValueError(v)
+        
+        raise ValueError(f"Invalid ALLOWED_ORIGINS format: {v}")
     
     @validator("SECRET_KEY")
     def validate_secret_key(cls, v):
